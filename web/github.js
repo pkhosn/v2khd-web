@@ -1,7 +1,7 @@
 'use strict';
 // No tokens are embedded in the published site or saved to browser storage.
 class GitHubBuildClient {
- constructor({repository,token,fetcher=globalThis.fetch.bind(globalThis)}){if(!/^[\w.-]+\/[\w.-]+$/.test(repository))throw Error('仓库格式应为 owner/repo');this.repository=repository;this.token=GitHubBuildClient.cleanToken(token);this.fetcher=fetcher;this.branch=null;this.cached=null;this.cacheAt=0;this.logos=new Map();this.statePending=null;this.completedJobs=new Map();this.logs=new Map();this.retryAt=0}
+ constructor({repository,token,fetcher=globalThis.fetch.bind(globalThis),sleep=ms=>new Promise(r=>setTimeout(r,ms))}){if(!/^[\w.-]+\/[\w.-]+$/.test(repository))throw Error('仓库格式应为 owner/repo');this.repository=repository;this.token=GitHubBuildClient.cleanToken(token);this.fetcher=fetcher;this.sleep=sleep;this.branch=null;this.cached=null;this.cacheAt=0;this.logos=new Map();this.statePending=null;this.completedJobs=new Map();this.logs=new Map();this.retryAt=0}
  static cleanToken(value){
  if(typeof value!=='string')throw Error('请输入 GitHub Token');
  const token=value.replace(/[\u200B-\u200D\uFEFF]/g,'').trim().replace(/^Bearer\s+/i,'').replace(/^["“‘']|["”’']$/g,'').trim();
@@ -39,6 +39,24 @@ class GitHubBuildClient {
  data.jobs.unshift({id,brandId,productName:brand.config.productName,version:brand.config.version,targets:[...new Set(targets)],createdAt:new Date().toISOString()});await this.write('.build-studio/state.json',data,'Queue build '+id);
  await this.request('/actions/workflows/build-client.yml/dispatches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ref:this.branch,inputs:{request_id:id,targets:JSON.stringify([...new Set(targets)])}})});this.cached=null;return{id}}
  async log(id){const s=await this.state(true),j=s.jobs.find(j=>j.id===id);if(!j?.runId)return{log:j?.status==='interrupted'?'任务已过保存期限。历史日志可在 GitHub Actions 查看：https://github.com/'+this.repository+'/actions/workflows/build-client.yml':'等待 GitHub 分配任务…'};const cachedLog=this.logs.get(j.runId);if(cachedLog&&(cachedLog.done||Date.now()-cachedLog.at<30000))return cachedLog.value;const rows=(await this.request('/actions/runs/'+j.runId+'/jobs?per_page=100')).jobs;const value={log:rows.map(x=>x.name+' · '+x.status+(x.conclusion?' / '+x.conclusion:'')+'\n'+(x.steps||[]).map(s=>'  '+s.name+' · '+(s.conclusion||s.status)).join('\n')).join('\n\n')+'\n\n完整日志：'+j.runUrl};this.logs.set(j.runId,{at:Date.now(),done:!['queued','running'].includes(j.status),value});return value}
- async download(id,index,onProgress=()=>{}){const s=await this.state(),a=s.jobs.find(j=>j.id===id)?.artifacts[index];if(!a||a.expiredAt&&Date.now()>=Date.parse(a.expiredAt))throw Error('安装包已过24小时保存期限，请重新打包');const route=a.releaseAssetId?'/releases/assets/'+a.releaseAssetId:'/actions/artifacts/'+a.artifactId+'/zip';const r=await this.request(route+'?ts='+Date.now(),{raw:true,headers:{Accept:a.releaseAssetId?'application/octet-stream':'application/vnd.github+json'}});const chunks=[];let received=0;for await(const chunk of r.body){chunks.push(chunk);received+=chunk.length;onProgress(Math.min(100,Math.floor(received/a.bytes*100)))}if(received!==a.bytes)throw Error('下载文件长度不一致，请重试');const bytes=await new Blob(chunks).arrayBuffer();if(a.sha256){const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');if(digest!==a.sha256)throw Error('下载校验失败，请重新下载')}return{blob:new Blob([bytes],{type:'application/zip'}),name:a.name}}
+ async download(id,index,onProgress=()=>{}){
+ const state=await this.state(),asset=state.jobs.find(j=>j.id===id)?.artifacts[index];
+ if(!asset||asset.expiredAt&&Date.now()>=Date.parse(asset.expiredAt))throw Error('安装包已过24小时保存期限，请重新打包');
+ const kind=asset.releaseAssetId?'release':'artifact',assetId=asset.releaseAssetId||asset.artifactId;
+ if(!/^\d{1,20}$/.test(String(assetId)))throw Error('Invalid installer identity');
+ const path='.build-studio/download-links/'+kind+'-'+assetId+'.json';
+ const read=async()=>{let ticket;try{ticket=await this.file(path)}catch(e){if(e.status===404)return null;throw e;}
+ if(ticket.kind!==kind||ticket.assetId!==assetId||ticket.bytes!==asset.bytes||ticket.name!==asset.name)throw Error('下载信息不匹配，请重新检查构建状态');
+ if(!Number.isFinite(Date.parse(ticket.expiresAt))||Date.parse(ticket.expiresAt)<=Date.now()+15000)return null;
+ if(asset.sha256&&ticket.sha256!==asset.sha256)throw Error('安装包校验信息不匹配');
+ const url=new URL(ticket.url);if(url.protocol!=='https:'||url.username||url.password||url.hash||!(url.hostname==='release-assets.githubusercontent.com'||/^productionresultssa\d+\.blob\.core\.windows\.net$/.test(url.hostname))||ticket.url.includes(this.token))throw Error('下载地址校验失败');
+ return {url:url.href,name:ticket.name,sha256:ticket.sha256,expiresAt:ticket.expiresAt};};
+ const existing=await read();if(existing)return existing;
+ onProgress('正在准备安全下载链接…');
+ await this.request('/actions/workflows/prepare-download.yml/dispatches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ref:this.branch,inputs:{kind,asset_id:String(assetId)}})});
+ // Only runs while the user has explicitly requested this download.
+ for(let attempt=0;attempt<24;attempt++){await this.sleep(5000);const ticket=await read();if(ticket)return ticket;}
+ throw Error('下载链接准备超时，请稍后再次点击下载，或查看下载准备工作流');
+ }
 }
 if(typeof module!=='undefined')module.exports={GitHubBuildClient};
