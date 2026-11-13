@@ -3,8 +3,10 @@
 const b64=bytes=>btoa(String.fromCharCode(...bytes));
 function newKey(){return b64(crypto.getRandomValues(new Uint8Array(32)));}
 function origin(value){const url=new URL(value);if(!/^https?:$/.test(url.protocol)||url.username||url.password||url.search||url.hash)throw Error('请填写有效的 API 源地址，不含账号、查询参数或片段');return url.toString().replace(/\/$/,'');}
-async function encode(value,mode,key){
+async function encode(value,mode,key,support){
  const data={api:origin(value)};
+ const normalized=(typeof module!=='undefined'&&module.exports?require('./support-config.js'):root.SupportConfig).normalizeSupport(support);
+ if(normalized)data.support=normalized;
  if(mode!=='aes-256-gcm')return data;
  if(!/^[A-Za-z0-9+/]{43}=$/.test(key||''))throw Error('加密密钥无效，请重新生成');
  const raw=Uint8Array.from(atob(key),c=>c.charCodeAt(0));

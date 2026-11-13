@@ -35,6 +35,8 @@ function validateBuildConfig(raw){
  const path=c.api.path??'/api/v1';if(typeof path!=='string'||!/^\/(?:[A-Za-z0-9._~-]+\/?)*$/.test(path)||path.includes('..'))throw Error('API 路径格式不正确，例如 /api/v1');
  if(!['none','aes-256-gcm'].includes(c.api.remoteConfigEncryption||'none'))throw Error('请选择支持的远程配置加密方式');
  if(c.api.remoteConfigEncryption==='aes-256-gcm'&&!/^[A-Za-z0-9+/]{43}=$/.test(c.api.remoteConfigKey||''))throw Error('加密配置缺少有效密钥，请重新选择加密并保存');
+ if(c.api.remoteSupport){const support=(typeof module!=='undefined'&&module.exports?require('./support-config.js'):root.SupportConfig).normalizeSupport(c.api.remoteSupport);if(support){let remote;try{remote=new URL(c.api.objectStorageUrl)}catch{throw Error('请填写用于下发客服的远程配置 JSON 地址')}if(remote.hostname==='example.invalid')throw Error('请把示例远程配置地址替换为实际对象存储地址');c.api.remoteSupport=support;}}
+ if(c.api.mode==='direct'&&c.api.objectStorageUrl){const remote=new URL(c.api.objectStorageUrl);if(!['http:','https:'].includes(remote.protocol)||remote.username||remote.password||remote.hash)throw Error('远程配置地址格式不正确');}
  for(const key of ['primary','background','onPrimary'])if(!/^#[\da-fA-F]{6}$/.test(c.theme?.[key]||''))throw Error('品牌颜色格式不正确');
  return c;
 }
