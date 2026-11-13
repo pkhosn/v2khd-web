@@ -1,0 +1,12 @@
+网页维护续接入口（2026-11-13）
+
+当前网页源码在 web/，配套客户端仓库：https://github.com/pkhosn/v2khd 。
+完整维护入口与本地验证证据保存在客户端仓库 docs/维护续接记录.txt 和 docs/webview-implementation/20261113/；体积数据只在那里维护，不在本仓库复制。
+
+web/build-config.js 是目标名称、Android ABI 映射与默认选择的唯一来源。当前默认 Android 为 android-arm，一个包含 ARM64+ARM32 的 APK；分架构和四 ABI 通用包为可选维护目标。Mac/Windows 默认仍是 Electron 兼容构建，新 Mac WebView 候选只走客户端本地 --runtime webview 入口，未自动切换全部设备。
+web/app.js 负责目标和表单渲染，web/github.js 负责请求/下载元数据；不要把 GitHub Token 放入品牌快照、配置或源码。客户端仓库的 web/ 为这份源码的备份，修改后保持逐文件一致。
+
+本地验证：客户端现有 ci/*.test.cjs 使用 node:test 检查双方配置、目标、请求、下载与清理契约。运行：
+在客户端根目录 ./engine/.toolchains/node/bin/node --test ci/*.test.cjs
+本仓库的 JS 可用 node --check 检查；不新增测试框架或平行构建脚本。
+本轮只执行本地验证；推送提交使用 [skip ci] 避免触发远程流水线。未手工调用 Pages 部署，线上内容不应当作已部署新版。需要上线时另行明确部署范围。
