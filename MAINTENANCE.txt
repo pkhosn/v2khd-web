@@ -23,3 +23,5 @@ web/support-config.js 为共享校验来源；web/index.html/app.js 提供客服
 2026-11-14 最终界面调整（替代同日追加选项方案）：只提供mac-arm64、mac-x64、win-x64、android-arm四项目标，界面均用标准平台名称。Mac内部直接构建WebView，标准DMG名，无减重/兼容等标签。artifactTargets只服务历史下载和清理，不可发起旧选项新构建。以客户端docs/window-controls/20261114/报告.txt最终方案为准。
 
 2026-11-14 Android客服补齐：客服配置导出协议不变，页面说明同步新版Android应用内半屏聊天浮层。客户端已在本机Android30/WebView91验证实际对象存储解密、真实Crisp显示/刷新/键盘及节点/VPN回归；未发送客服消息或附件。实现与可重复本地验证唯一来源：客户端docs/ui-support/20261114/android-support.txt。配套web目录八文件保持一致。本轮只发布静态工作台，不触发远程客户端构建或验证。
+
+2026-11-14 Android登录与高度修正：客户端配置响应处理覆盖React fetch的Blob分支；客服按最新要求增高，网页去掉半屏限定说明，导出协议及对象存储文件无需更改。客户端续接入口docs/ui-support/20261114/android-login.txt；旧1.0.8用户须安装修复版，不能仅靠远程配置修复本地传输逻辑。
