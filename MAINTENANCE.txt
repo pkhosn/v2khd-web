@@ -17,3 +17,5 @@ web/support-config.js 为共享校验来源；web/index.html/app.js 提供客服
 客户端对应功能提交：50b71e2c0e86b0da99edbc8dc488d56a8d5640ce；网页文件一致性见该提交 paired-web.json。
 
 2026-11-14：已在 Mac WKWebView 与实际 Electron11 包中对用户指定的真实 Crisp 页面验证显示、表情、刷新及隔离；未发送消息或附件，未执行 Windows 本机界面。线上对象存储与 Pages 未改动。范围及复现方式见私有客户端仓库 docs/ui-support/20261114/报告.txt。
+
+2026-11-14 窗口修复配套：工作台新增mac-arm64-webview、mac-x64-webview可选目标，默认Electron兼容目标保留。共享buildTarget定义runner/core/runtime/产物路由，客户端原生标题栏恢复系统按钮。完整本地验证与在线发布边界见私有客户端docs/window-controls/20261114/报告.txt；发布静态网页与用户自行在线打包分开，未用远程验证替代本地验收。
