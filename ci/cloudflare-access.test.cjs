@@ -16,3 +16,11 @@ test('Default and legacy deploy configs use the same protected worker without ma
  const files=[path.join(root,'wrangler.jsonc'),path.join(root,'ci/cloudflare/wrangler.jsonc')];
  for(const file of files){const c=JSON.parse(fs.readFileSync(file));assert.equal(c.name,'v2khd-web');assert.equal(c.workers_dev,true);assert.equal(c.preview_urls,false);assert.equal(c.routes,undefined);assert.equal(c.assets.run_worker_first,true);assert.equal(path.resolve(path.dirname(file),c.main),path.join(root,'ci/cloudflare/worker.mjs'));assert.equal(path.resolve(path.dirname(file),c.assets.directory),path.join(root,'web'));assert.equal(c.ratelimits[0].name,'LOGIN_RATE_LIMITER');}
 });
+test('Login page preserves same-origin form Origin instead of causing an opaque Origin',async()=>{
+ const {default:w}=await worker(),e=env(),page=await w.fetch(req(),e);
+ // Fetch's append-Origin algorithm serializes navigation POST Origin as null with no-referrer.
+ assert.equal(page.headers.get('referrer-policy'),'same-origin');
+ const origin=page.headers.get('referrer-policy')==='no-referrer'?'null':new URL('https://build.example.com/').origin;
+ const loggedIn=await w.fetch(post(secret,origin),e);assert.equal(loggedIn.status,303);
+ for(const badOrigin of ['null','https://attacker.example'])assert.equal((await w.fetch(post(secret,badOrigin),e)).status,403);
+});
