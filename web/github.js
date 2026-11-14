@@ -1,9 +1,16 @@
 'use strict';
 // No tokens are embedded in the published site or saved to browser storage.
 class GitHubBuildClient {
- constructor({repository,token,fetcher=globalThis.fetch.bind(globalThis),sleep=ms=>new Promise(r=>setTimeout(r,ms))}){if(!/^[\w.-]+\/[\w.-]+$/.test(repository))throw Error('仓库格式应为 owner/repo');this.repository=repository;this.token=GitHubBuildClient.cleanToken(token);this.fetcher=fetcher;this.sleep=sleep;this.branch=null;this.cached=null;this.cacheAt=0;this.logos=new Map();this.statePending=null;this.completedJobs=new Map();this.logs=new Map();this.retryAt=0}
+ constructor({repository,token,fetcher=globalThis.fetch.bind(globalThis),sleep=ms=>new Promise(r=>setTimeout(r,ms))}){if(!/^[\w.-]+\/[\w.-]+$/.test(repository))throw Error('仓库格式应为 owner/repo');this.browserOnlyBrands=typeof window!=='undefined';this.repository=repository;this.token=GitHubBuildClient.cleanToken(token);this.fetcher=fetcher;this.sleep=sleep;this.branch=null;this.cached=null;this.cacheAt=0;this.logos=new Map();this.statePending=null;this.completedJobs=new Map();this.logs=new Map();this.retryAt=0}
  static targets(){return (typeof module!=='undefined'&&module.exports?require('./build-config.js'):globalThis.BuildConfig).buildTargets}
  static validateConfig(value){return (typeof module!=='undefined'&&module.exports?require('./build-config.js'):globalThis.BuildConfig).validateBuildConfig(value)}
+ static sameContent(a,b){
+ const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])])):value;
+ return JSON.stringify(stable(a))===JSON.stringify(stable(b));
+ }
+ static sameConfig(a,b){
+ try{const normalized=value=>{const c=GitHubBuildClient.validateConfig(value);c.api.remoteConfigEncryption||='none';c.api.remoteSupport||={provider:'none',url:''};return c;};return GitHubBuildClient.sameContent(normalized(a),normalized(b));}catch{return false;}
+ }
  static cleanToken(value){
  if(typeof value!=='string')throw Error('请输入 GitHub Token');
  const token=value.replace(/[\u200B-\u200D\uFEFF]/g,'').trim().replace(/^Bearer\s+/i,'').replace(/^["“‘']|["”’']$/g,'').trim();
@@ -11,12 +18,12 @@ class GitHubBuildClient {
  return token;
  }
  rateError(){const error=Error('GitHub API 已限流，将于 '+new Date(this.retryAt).toLocaleTimeString('zh-CN',{hour12:false})+' 后重试');error.status=429;error.retryAt=this.retryAt;return error}
- async request(route,options={}){if(Date.now()<this.retryAt)throw this.rateError();const target=(!options.method||options.method==='GET')?route+(route.includes('?')?'&':'?')+'_t='+Date.now():route;const r=await this.fetcher('https://api.github.com/repos/'+this.repository+target,{cache:'no-store',...options,signal:options.signal||AbortSignal.timeout(options.raw?600000:30000),headers:{Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',Authorization:'Bearer '+this.token,...options.headers}});if(!r.ok){let d;try{d=await r.json()}catch{}const reset=Number(r.headers.get('x-ratelimit-reset'))*1000,retry=Number(r.headers.get('retry-after'));if((r.status===403||r.status===429)&&(r.headers.get('x-ratelimit-remaining')==='0'||r.status===429||/rate limit/i.test(d?.message||''))){this.retryAt=Math.max(Date.now()+1000,r.headers.get('x-ratelimit-remaining')==='0'&&Number.isFinite(reset)&&reset>Date.now()?reset:Date.now()+(retry>0?retry:60)*1000);throw this.rateError();}const error=Error(r.status===401?'GitHub 授权已失效，请重新连接':r.status===404?'无法访问仓库或工作流，请检查仓库名及授权范围':r.status===403?'GitHub 拒绝访问，请检查权限、账户额度及 API 频率限制':(d?.message||'GitHub 请求失败')+' ('+r.status+')');error.status=r.status;throw error}if(r.status===204)return null;return options.raw?r:r.json()}
+ async request(route,options={}){if(this.browserOnlyBrands&&/^\/contents\/\.build-studio\/(?:state\.json|requests\/)/.test(route))throw Error('品牌配置仅存当前浏览器，禁止读写仓库品牌文件');if(Date.now()<this.retryAt)throw this.rateError();const target=(!options.method||options.method==='GET')?route+(route.includes('?')?'&':'?')+'_t='+Date.now():route;const r=await this.fetcher('https://api.github.com/repos/'+this.repository+target,{cache:'no-store',...options,signal:options.signal||AbortSignal.timeout(options.raw?600000:30000),headers:{Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',Authorization:'Bearer '+this.token,...options.headers}});if(!r.ok){let d;try{d=await r.json()}catch{}const reset=Number(r.headers.get('x-ratelimit-reset'))*1000,retry=Number(r.headers.get('retry-after'));if((r.status===403||r.status===429)&&(r.headers.get('x-ratelimit-remaining')==='0'||r.status===429||/rate limit/i.test(d?.message||''))){this.retryAt=Math.max(Date.now()+1000,r.headers.get('x-ratelimit-remaining')==='0'&&Number.isFinite(reset)&&reset>Date.now()?reset:Date.now()+(retry>0?retry:60)*1000);throw this.rateError();}const error=Error(r.status===401?'GitHub 授权已失效，请重新连接':r.status===404?'无法访问仓库或工作流，请检查仓库名及授权范围':r.status===403?'GitHub 拒绝访问，请检查权限、账户额度及 API 频率限制':(d?.message||'GitHub 请求失败')+' ('+r.status+')');error.status=r.status;throw error}if(r.status===204)return null;return options.raw?r:r.json()}
  encode(text){const bytes=new TextEncoder().encode(text);let result='';for(let i=0;i<bytes.length;i+=16384)result+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(result)}
  decode(text){return new TextDecoder().decode(Uint8Array.from(atob(text.replace(/\s/g,'')),c=>c.charCodeAt(0)))}
  async file(name){const r=await this.request('/contents/'+name+'?ref='+encodeURIComponent(this.branch),{cache:'no-store',headers:{Accept:'application/vnd.github.raw+json'},raw:true});return JSON.parse(await r.text())}
  async write(name,value,message){let sha;try{const old=await this.request('/contents/'+name+'?ref='+encodeURIComponent(this.branch)+'&t='+Date.now(),{cache:'no-store',headers:{Accept:'application/vnd.github.object+json'}});if(typeof old.sha!=='string'||!/^[a-f0-9]{40}$/i.test(old.sha))throw Error('无法读取文件版本，请刷新页面后重试');sha=old.sha}catch(e){if(e.status!==404)throw e}return this.request('/contents/'+name,{method:'PUT',body:JSON.stringify({message,branch:this.branch,...(sha?{sha}:{}),content:this.encode(JSON.stringify(value,null,2))}),headers:{'Content-Type':'application/json'}})}
- async connect(){const repo=await this.request('');if(!repo.permissions?.push)throw Error('当前授权没有该仓库写入权限');this.branch=repo.default_branch;await this.request('/actions/workflows/build-client.yml');return this}
+ async connect(){const repo=await this.request('');if(!repo.permissions?.push)throw Error('当前授权没有该仓库写入权限');this.branch=repo.default_branch;this.isPrivate=repo.private;await this.request('/actions/workflows/build-client.yml');return this}
  async metadata(){return this.file('.build-studio/state.json')}
  async state(force=false){if(this.statePending)return this.statePending;if(!force&&this.cached)return this.expire(this.cached);this.statePending=this.loadState(force).finally(()=>{this.statePending=null});return this.statePending}
  expire(state){for(const j of state.jobs){if(Date.now()-Date.parse(j.createdAt)>=86400000||j.artifacts.some(a=>a.expiredAt&&Date.now()>=Date.parse(a.expiredAt))){j.artifacts=[];j.status='interrupted';j.step='安装包已过24小时保存期限，请重新打包';}}return state}
@@ -34,7 +41,16 @@ class GitHubBuildClient {
  if(out.status==='success'&&out.artifacts.length!==j.targets.length){out.status='interrupted';out.step='安装包不存在或已过24小时保存期限，请重新打包'}}
  if(run.status==='completed')this.completedJobs.set(j.id,{runId:run.id,at:Date.now(),value:structuredClone(out)});return out});
  const result={brands:data.brands.map(b=>{this.logos.set(b.id,b.logo||data.defaultLogo);return b}),jobs,engine:{ready:true,version:'GitHub Actions',cloud:true},targets:[...GitHubBuildClient.targets()]};this.cached=result;this.cacheAt=Date.now();return result}
- async saveBrand({id,config,logo}){config=GitHubBuildClient.validateConfig(config);const data=await this.metadata();id=id||crypto.randomUUID();const index=data.brands.findIndex(b=>b.id===id);const brand={id,label:config.productName,config,logo:logo||data.brands[index]?.logo||data.defaultLogo,updatedAt:new Date().toISOString()};if(index<0)data.brands.push(brand);else data.brands[index]=brand;await this.write('.build-studio/state.json',data,'Save brand '+id);this.logos.set(id,brand.logo);this.cached=null;return brand}
+ async saveBrand({id,config,logo}){
+ config=GitHubBuildClient.validateConfig(config);const data=await this.metadata();id=id||crypto.randomUUID();
+ const index=data.brands.findIndex(b=>b.id===id),previous=data.brands[index];const effectiveLogo=logo||previous?.logo||data.defaultLogo;
+ if(previous&&previous.label===config.productName&&GitHubBuildClient.sameConfig(previous.config,config)&&(previous.logo||data.defaultLogo)===effectiveLogo){
+  this.logos.set(id,effectiveLogo);return {...previous,logo:effectiveLogo,changed:false};
+ }
+ const brand={id,label:config.productName,config,logo:effectiveLogo,updatedAt:new Date().toISOString()};
+ if(index<0)data.brands.push(brand);else data.brands[index]=brand;
+ await this.write('.build-studio/state.json',data,'Save brand '+id);this.logos.set(id,brand.logo);this.cached=null;return {...brand,changed:true};
+ }
  async build({brandId,targets}){const data=await this.metadata(),brand=data.brands.find(b=>b.id===brandId);if(!brand)throw Error('品牌不存在');const allowed=GitHubBuildClient.targets();if(!Array.isArray(targets)||!targets.length||targets.some(t=>!allowed.includes(t)))throw Error('请选择有效平台');const id=crypto.randomUUID(),request={id,config:GitHubBuildClient.validateConfig(brand.config),logo:brand.logo||data.defaultLogo};
  await this.write('.build-studio/requests/'+id+'.json',request,'Create build snapshot '+id);
  // Record before dispatch so a completed dispatch remains discoverable if the browser closes.

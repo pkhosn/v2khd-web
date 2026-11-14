@@ -1,0 +1,36 @@
+{
+  "productName": "潮汐示例",
+  "appId": "com.example.tidalclient",
+  "version": "1.0.8",
+  "author": "Your Company",
+  "api": {
+    "mode": "direct",
+    "origin": "https://example.invalid",
+    "path": "/api/v1",
+    "objectStorageUrl": "https://example.invalid/config.json",
+    "configRefreshSeconds": 60,
+    "remoteConfigEncryption": "none"
+  },
+  "theme": {
+    "primary": "#043377",
+    "background": "#043377",
+    "onPrimary": "#ffffff"
+  },
+  "assets": {
+    "logo": "branding/logo.png",
+    "loginBackground": "",
+    "headerBackground": ""
+  },
+  "proxy": {
+    "systemProxy": true,
+    "engine": "sing-box",
+    "port": 7890
+  },
+  "nodes": {
+    "refreshOnStartup": true,
+    "refreshIntervalMinutes": 0
+  },
+  "login": {
+    "branding": "name"
+  }
+}
