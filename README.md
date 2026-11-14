@@ -5,10 +5,10 @@
 Cloudflare 导入本仓库，分支 `main`，构建命令留空，部署命令：
 
 ```sh
-npx --yes wrangler@4.162.0 deploy --config ci/cloudflare/wrangler.jsonc
+npx --yes wrangler@4.162.0 deploy
 ```
 
-在 Worker 的 Settings → Variables and Secrets 新增 Secret `BUILD_ACCESS_CODE`，填写自己的授权码（至少 12 位），保存并部署。访问域名为 `app.lionhome.eu.org`。无需配置 Cloudflare Access。
+在 Worker 的 Settings → Variables and Secrets 新增 Secret `BUILD_ACCESS_CODE`，填写自己的授权码（至少 12 位），保存并部署。先使用控制台提供的 `workers.dev` 地址，自定义域名可稍后绑定。Worker 名称为 `v2khd-web`，默认不改动现有 DNS。无需配置 Cloudflare Access。
 
 进入流程：打开网页 → 输入授权码 → 进入工作台。未登录时无法获取工作台脚本，登录保持 8 小时。授权码只保存为 Cloudflare Secret，不写入本仓库。
 

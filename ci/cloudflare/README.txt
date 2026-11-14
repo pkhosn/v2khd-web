@@ -1,17 +1,18 @@
-授权码打包后台 · app.lionhome.eu.org
+授权码打包后台 · v2khd-web
 
 访问流程：打开网页 → 输入授权码 → 进入打包工作台。
 无需 Cloudflare Access、邮箱或验证码。
 
 Cloudflare 后台部署（关联 GitHub）：
 1. Workers & Pages → 创建应用 → 导入 GitHub 仓库，选择 Worker。
-2. 导入前端仓库 pkhosn/v2khd-web，分支 main，名称 v2khd-build-studio。
-3. 根目录默认，构建命令留空，部署命令：
-   npx --yes wrangler@4.162.0 deploy --config ci/cloudflare/wrangler.jsonc
+2. 导入前端仓库 pkhosn/v2khd-web，分支 main，名称 v2khd-web。
+3. 根目录默认，构建命令留空（不要把部署命令填在此处），部署命令：
+   npx --yes wrangler@4.162.0 deploy
 4. 部署完成后，Worker → Settings → Variables and Secrets → Add：
    名称 BUILD_ACCESS_CODE，类型 Secret，值填写你自己设置的授权码（至少 12 位，建议随机生成）。
    保存并部署。授权码只保存在 Cloudflare 的 Secret 中，不要写进仓库或品牌 JSON。
-5. 打开 https://app.lionhome.eu.org，输入授权码进入。
+5. 打开 Worker 控制台显示的 workers.dev 地址，输入授权码进入。
+   自定义域名可稍后在 Settings → Domains & Routes 中绑定；默认部署不改动现有 DNS 记录。
 
 如果之前设置过 Cloudflare Access，关闭该 Worker 的 Access 保护，避免先出现邮箱登录页。
 未设置授权码时返回 503，页面不会公开。未登录不能访问页面脚本。
