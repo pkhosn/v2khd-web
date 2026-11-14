@@ -31,3 +31,5 @@ web/support-config.js 为共享校验来源；web/index.html/app.js 提供客服
 2026-11-14 Android首页对齐：客服入口改为跟随原连接按钮中心，网页配置字段与四平台目标不变。客户端复现、屏幕尺寸与交付验收统一见docs/ui-support/20261114/android-support-alignment.txt。
 
 2026-11-14 客服开关最终规则：使用既有远程配置导出中的关闭/Crisp/自建选择，重新下载上传对象存储后动态隐藏/恢复；不增加需要重新打包的品牌开关。客户端1.0.11补齐桌面入口状态，旧桌面首次升级后未来仅更新JSON；安卓原动态机制保留。网页说明已同步，协议唯一来源为客户端docs/remote-config.md。
+
+2026-11-14 浏览器本地品牌库：用户明确授权提交上线并真实打包验收。工作台品牌改为站点IndexedDB，完整JSON备份含Logo；云端仅接收gzip/AES-GCM临时workflow输入，不再创建品牌state/requests提交。新增local-brands.js、build-transfer.js、brand-default.json和通用default-logo.png，两个仓库web目录继续同步。完整协议、容量确认和历史数据边界以私有仓库docs/browser-brand-storage.md为准；旧Git配置历史没有自动清除，此项不等同客户端其他隐私整改全部完成。
