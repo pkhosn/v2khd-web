@@ -15,3 +15,5 @@ web/app.js 负责目标和表单渲染，web/github.js 负责请求/下载元数
 web/support-config.js 为共享校验来源；web/index.html/app.js 提供客服类型、网页地址及对象存储导出。remote-config.js 导出 api 和可选 support，沿用已有 AES-GCM 协议。直接 API 模式也可通过对象存储下发客服，不改变 API 路由。只修改网页不会让旧客户端自动获得按钮，需要新版客户端。
 完整协议与实施/验证记录以私有客户端仓库 docs/remote-config.md、docs/ui-support/20261113/报告.txt 为准，不复制实现细节。两个仓库 web 文件必须逐字节一致。未部署 Pages、未触发构建队列，全部验证在本机执行。
 客户端对应功能提交：50b71e2c0e86b0da99edbc8dc488d56a8d5640ce；网页文件一致性见该提交 paired-web.json。
+
+2026-11-14：已在 Mac WKWebView 与实际 Electron11 包中对用户指定的真实 Crisp 页面验证显示、表情、刷新及隔离；未发送消息或附件，未执行 Windows 本机界面。线上对象存储与 Pages 未改动。范围及复现方式见私有客户端仓库 docs/ui-support/20261114/报告.txt。
