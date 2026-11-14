@@ -20,8 +20,7 @@ Cloudflare 后台部署（关联 GitHub）：
 错误尝试受每 IP 每分钟 5 次的边缘限流约束（按 Cloudflare 机房计数）。
 
 迁移：先在旧网页导出品牌 JSON，在新域名导入。
-新入口验证正常后，GitHub → pkhosn/v2khd-web → Settings → Pages → Unpublish site，关闭旧公开入口。
-若存在 Pages 自动发布工作流，禁用它以防重新公开。
+旧 GitHub Pages 入口已关闭，自动发布工作流已移除。不要重新开启 Pages，以免绕过网页授权码入口。
 进入工作台后，打包连接的目标仓库仍为私有仓库 pkhosn/v2khd。GitHub Token 仍仅用于打包授权，保存在页面内存中。
 
 后续更新代码推送到 main，Cloudflare 自动更新，Secret 授权码不需要重新写进代码。
