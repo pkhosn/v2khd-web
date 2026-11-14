@@ -1,24 +1,21 @@
 (function(root){
 'use strict';
 const targetDetails={
- 'mac-arm64-webview':{name:'macOS 减重版',detail:'Apple Silicon · WebView · DMG',arch:'arm64',selected:false},
- 'mac-x64-webview':{name:'macOS 减重版',detail:'Intel · WebView · DMG',arch:'x64',selected:false},
- 'mac-arm64':{name:'macOS 兼容版',detail:'Apple Silicon · DMG',arch:'arm64',selected:true},
- 'mac-x64':{name:'macOS 兼容版',detail:'Intel · DMG',arch:'x64',selected:true},
+ 'mac-arm64':{name:'macOS',detail:'Apple Silicon · DMG',arch:'arm64',selected:true},
+ 'mac-x64':{name:'macOS',detail:'Intel · DMG',arch:'x64',selected:true},
  'win-x64':{name:'Windows',detail:'安装向导 · EXE',arch:'x64',selected:true},
- 'android-arm':{name:'Android',detail:'ARM64 + ARM32 手机通用 · APK',arch:'2 ARM ABI',selected:true},
- 'android-arm64':{name:'Android ARM64',detail:'仅 64 位安卓手机 · APK',arch:'arm64-v8a',selected:false},
- 'android-arm32':{name:'Android ARM32',detail:'仅 32 位安卓手机 · APK',arch:'armeabi-v7a',selected:false},
- 'android':{name:'Android 通用备用',detail:'兼容原四种架构 · APK',arch:'4 ABI',selected:false}
+ 'android-arm':{name:'Android',detail:'ARM64 + ARM32 手机通用 · APK',arch:'2 ARM ABI',selected:true}
 };
 const buildTargets=Object.freeze(Object.keys(targetDetails));
-const androidAbis=Object.freeze({'android-arm':'arm','android-arm64':'arm64-v8a','android-arm32':'armeabi-v7a',android:'all'});
+// Historical downloads/expiry cleanup must still recognize earlier split APKs.
+const artifactTargets=Object.freeze([...buildTargets,'android-arm64','android-arm32','android']);
+const androidAbis=Object.freeze({'android-arm':'arm'});
 function buildTarget(target){
  if(!buildTargets.includes(target))throw Error('Invalid target');
  const abi=androidAbis[target];
- if(abi)return {os:'macos-15',abi,artifactSuffix:'-android'+(abi==='all'?'':'-'+abi)+'.apk'};
- const [platform,arch,variant]=target.split('-');
- return {os:platform==='win'?'windows-2022':arch==='x64'?'macos-15-intel':'macos-15',platform,arch,runtime:variant==='webview'?'webview':'electron',coreTarget:platform+'-'+arch,artifactSuffix:'-'+target+(platform==='mac'?'.dmg':'.exe')};
+ if(abi)return {os:'macos-15',abi,artifactSuffix:'-android-arm.apk'};
+ const [platform,arch]=target.split('-');
+ return {os:platform==='win'?'windows-2022':arch==='x64'?'macos-15-intel':'macos-15',platform,arch,runtime:platform==='mac'?'webview':'electron',coreTarget:platform+'-'+arch,artifactSuffix:'-'+target+(platform==='mac'?'.dmg':'.exe')};
 }
 function normalizeAppId(value){
  if(typeof value!=='string'||!value.trim())throw Error('请填写应用标识，例如 com.example.client');
@@ -49,5 +46,5 @@ function validateBuildConfig(raw){
  for(const key of ['primary','background','onPrimary'])if(!/^#[\da-fA-F]{6}$/.test(c.theme?.[key]||''))throw Error('品牌颜色格式不正确');
  return c;
 }
-const api={normalizeAppId,validateBuildConfig,buildTargets,androidAbis,targetDetails,buildTarget};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.BuildConfig=api;
+const api={normalizeAppId,validateBuildConfig,buildTargets,artifactTargets,androidAbis,targetDetails,buildTarget};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.BuildConfig=api;
 })(globalThis);
