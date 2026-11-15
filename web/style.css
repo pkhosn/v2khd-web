@@ -4,3 +4,5 @@
 /* Browser-local brand backup controls stay usable in narrow editors. */
 .actions{flex-wrap:wrap}.actions #message{order:-1;flex:0 0 100%;max-width:none;margin-right:0}.actions>button,.actions>label{flex-shrink:0}.actions>label.secondary{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
 @media(max-width:600px){.actions>button,.actions>label{flex:1 1 calc(50% - 10px);text-align:center;justify-content:center}}
+
+.remote-key-field{grid-column:1/-1}.key-controls{display:flex;align-items:center;gap:8px}.key-controls input{flex:1;min-width:0;font-family:monospace}.key-controls button{flex-shrink:0;white-space:nowrap}.remote-key-field>small{font-size:11px;font-weight:400;color:#7c8b81}
