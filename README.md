@@ -17,3 +17,5 @@ npx --yes wrangler@4.162.0 deploy
 三端软件本身不包含网页授权码功能；客户端构建工作流继续由私有仓库负责。
 
 完整部署步骤见 [部署说明](ci/cloudflare/README.txt)。旧 GitHub Pages 公开入口已关闭，原 Pages 发布工作流已移除。仅通过 Cloudflare 的授权码入口访问工作台，不要重新开启 Pages 发布。
+
+版本号只填写一次，三端展示一致；Android 内部构建号自动生成并兼容旧品牌备份，不需要手工填写。
